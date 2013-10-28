@@ -1,4 +1,4 @@
-PDC
+PRC
 ===
 
-Python Debug Console - PDC
+Python Remote Console - PRC
