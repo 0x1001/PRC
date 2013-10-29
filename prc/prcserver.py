@@ -1,61 +1,38 @@
 import code
 import prcexception
+import SocketServer
+################################################################################
+############################## Constants #######################################
+################################################################################
+DEFAULT_PORT = 49988
+
 ################################################################################
 ############################## Classes #########################################
 ################################################################################
-class PRCException(prcexception.PRCException): pass
+class PRCServerException(prcexception.PRCException): pass
 
 class PRCServer(object):
     """
         This is main PRCServer class
 
         Variables:
-        _input_queue        - Input queue for interpreter commands
-        _output_queue       - Output queue for commands output
-        _console_thread     - Console Thread
-        _comm_server        - Socket server
-        _comm_server_thread - Communication Thread
-
+        _comm_server            - Socket server
+        _comm_server_thread     - Communication Thread
+        _ip                     - Server address
+        _port                   - Server port
     """
-    def __init__(self):
-        import Queue
-        from comm import CommServer
+    def __init__(self,ip=None,port=None):
+        from comm import getHostName
+        from comm import server_factory
 
-        self._input_queue = Queue.Queue()
-        self._output_queue = Queue.Queue()
+        self._ip = ip if ip else getHostName()
+        self._port = port if port else DEFAULT_PORT
 
-        console = Console()
-        console.set_inout_queues(self._input_queue,self._output_queue)
-        self._console_thread = threading.Thread(target=console.interact)
-        self._console_thread.daemon = True
+        try: self._comm_server = server_factory(self._ip,self._port,request_handler,PRCSocketServer)
+        except comm.CommServerException as error: raise PRCServerException(error)
 
-        self._comm_server = _setup_commserver()
         self._comm_server_thread = threading.Thread(target=self._comm_server.serve_forever)
         self._comm_server_thread.daemon = True
-
-    def _setup_commserver(self):
-        """
-            Prepares CommServer
-
-            Input:
-            Nothing
-
-            Returns:
-            Nothing
-        """
-        from comm import CommServer
-        import socket
-        import SocketServer
-
-        class Handler(CommServer): pass
-
-        SocketServer.ThreadingTCPServer.request_queue_size=3
-        try:
-            server_handle = SocketServer.ThreadingTCPServer((ip,port),Handler)
-        except socket.error as error:
-            raise CommServerException(str(error))
-
-        return server_handle
 
     def start(self):
         """
@@ -67,43 +44,75 @@ class PRCServer(object):
             Returns:
             Nothing
         """
-        self._console_thread.start()
         self._comm_server_thread.start()
+
+    def stop(self):
+        """
+            Stops PRC Server
+
+            Input:
+            Nothing
+
+            Returns:
+            Nothing
+        """
+        self._comm_server.shutdown()
 
 class Console(code.InteractiveConsole):
     """
-        Console class
+        Console class. Runs interact function in thread
 
         Variables:
         _input_queue            - Input command queue
         _output_queue           - Output data queue
-
     """
+    def __init__(self,*args,**kargs):
+        import Queue
+
+        super(Console,self).__init__(*args,**kargs)
+
+        self._input_queue = Queue.Queue()
+        self._output_queue = Queue.Queue()
+
+        console_thread = threading.Thread(target=self.interact)
+        console_thread.daemon = True
+        console_thread.start()
+
     def raw_input(self,prompt=None):
         """
             Raw input for interpreter
 
             Input:
-            data        - Input python code string
+            prompt      - Python prompt string
 
             Returns:
             data
         """
         return self._input_queue.get()
 
-    def set_inout_queues(self,input_queue,output_queue):
+    def get_input_queue(self,input_queue,output_queue):
         """
-            Sets input and output queue
+            Returns input queue
 
             Input:
-            input_queue         - Input command queue
-            output_queue        - Output data queue
+            Nothing
 
             Returns:
-            Nothing
+            Queue
         """
-        self._input_queue = input_queue
-        self._output_queue = output_queue
+        return self._input_queue
+
+    def get_output_queue(self,input_queue,output_queue):
+        """
+            Returns input queue
+
+            Input:
+            Nothing
+
+            Returns:
+            Queue
+        """
+        return self._output_queue
 
     def write(self,data):
         """
@@ -117,6 +126,77 @@ class Console(code.InteractiveConsole):
         """
         self._output_queue.put(data)
 
+class PRCSocketServer(SocketServer.ThreadingTCPServer):
+    """
+        PRC socket server with support for consoles.
+
+        Variables:
+        _consoles       - Dictionary with consoles
+    """
+    def __init__(self,*args,**kargs):
+        import threading
+
+        super(PRCSocketServer,self).__init__(*args,**kargs)
+        self._consoles = {}
+        self._consoles_lock = threading.RLock()
+
+    def add_console(self,client_id):
+        """
+            Adds new console
+
+            Input:
+            client_id       - Client ID
+
+            Returns:
+            Nothing
+        """
+        with self._consoles_lock: self._consoles[client_id] = Console()
+
+    def remove_console(self,client_id):
+        """
+            Removes client console
+
+            Input:
+            client_id       - Client ID
+
+            Returns:
+            Nothing
+        """
+        with self._consoles_lock: self._consoles.pop(client_id)
+
+    def get_console(self,client_id):
+        """
+            Gets client console
+
+            Input:
+            client_id       - Client ID
+
+            Returns:
+            Console
+        """
+        with self._consoles_lock: return self._consoles[client_id]
+
 ################################################################################
 ############################## Functions #######################################
 ################################################################################
+
+def request_handler(request):
+    """
+        Handles clients requestes
+
+        Input:
+        request     - Client request
+
+        Returns:
+        Nothing
+    """
+    #request.server.add_console(client_id)
+    #request.server.remove_console(client_id)
+    #console = request.server.get_console(client_id)
+    #output_queue = console.get_output_queue()
+    #input_queue = console.get_input_queue()
+
+    # Requestes:
+    #   Create new console for client_id
+    #   Execute commands for client_id
+    #   Sends output string continuously for client_id
