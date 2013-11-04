@@ -24,12 +24,14 @@ class PRCServer(object):
     def __init__(self,ip=None,port=None):
         from comm import getHostName
         from comm import server_factory
+        from comm import CommServerException
+        import threading
 
         self._ip = ip if ip else getHostName()
         self._port = port if port else DEFAULT_PORT
 
         try: self._comm_server = server_factory(self._ip,self._port,request_handler,PRCSocketServer)
-        except comm.CommServerException as error: raise PRCServerException(error)
+        except CommServerException as error: raise PRCServerException(error)
 
         self._comm_server_thread = threading.Thread(target=self._comm_server.serve_forever)
         self._comm_server_thread.daemon = True
@@ -58,7 +60,7 @@ class PRCServer(object):
         """
         self._comm_server.shutdown()
 
-class Console(code.InteractiveConsole):
+class PRCConsole(code.InteractiveConsole):
     """
         Console class. Runs interact function in thread
 
@@ -69,7 +71,7 @@ class Console(code.InteractiveConsole):
     def __init__(self,*args,**kargs):
         import Queue
 
-        super(Console,self).__init__(*args,**kargs)
+        super(PRCConsole,self).__init__(*args,**kargs)
 
         self._input_queue = Queue.Queue()
         self._output_queue = Queue.Queue()
@@ -136,7 +138,7 @@ class PRCSocketServer(SocketServer.ThreadingTCPServer):
     def __init__(self,*args,**kargs):
         import threading
 
-        super(PRCSocketServer,self).__init__(*args,**kargs)
+        SocketServer.ThreadingTCPServer.__init__(self,*args,**kargs)
         self._consoles = {}
         self._consoles_lock = threading.RLock()
 
@@ -150,7 +152,7 @@ class PRCSocketServer(SocketServer.ThreadingTCPServer):
             Returns:
             Nothing
         """
-        with self._consoles_lock: self._consoles[client_id] = Console()
+        with self._consoles_lock: self._consoles[client_id] = PRCConsole()
 
     def remove_console(self,client_id):
         """
@@ -190,6 +192,7 @@ def request_handler(request):
         Returns:
         Nothing
     """
+    import protocol
     #request.server.add_console(client_id)
     #request.server.remove_console(client_id)
     #console = request.server.get_console(client_id)
@@ -200,3 +203,15 @@ def request_handler(request):
     #   Create new console for client_id
     #   Execute commands for client_id
     #   Sends output string continuously for client_id
+    input_data = request.receive()
+
+    if protocol.analyze(input_data) == protocol.PRC_NEW_SESSION:
+        #request.server.add_console(protocol.server_new_session(input_data))
+        print protocol.server_new_session(input_data)
+        output_data = protocol.confirm()
+    else:
+        pass
+        #Not implemented
+
+    request.send(output_data)
+    request.close()
