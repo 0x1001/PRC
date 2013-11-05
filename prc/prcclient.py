@@ -54,10 +54,30 @@ class PRCClient(object):
             Returns:
             Nothing
         """
-        import protocol
+        from comm import protocol
+        import prc
         from comm import sendAndReceive
 
-        sendAndReceive(self._ip,self._port,protocol.client_new_session(self._session_id))
+        sendAndReceive(self._ip,self._port,protocol.frame(prc.PRC_NEW_SESSION,self._session_id))
+
+    def _prompt(self):
+        """
+            This function gets prompt from server
+
+            Input:
+            Nothing
+
+            Returns:
+            prompt
+        """
+        from comm import protocol
+        import prc
+        from comm import sendAndReceive
+
+        frame = sendAndReceive(self._ip,self._port,protocol.frame(prc.PRC_PROMPT,self._session_id))
+        cmd,prompt = protocol.analyze(frame)
+
+        return prompt
 
     def _input(self):
         """
@@ -69,7 +89,7 @@ class PRCClient(object):
             Returns:
             Nothing
         """
-        while True: self._sendConsoleInput(raw_input())
+        while True: self._sendConsoleInput(raw_input(self._prompt()))
 
     def _sendConsoleInput(self,data):
         """
@@ -82,9 +102,11 @@ class PRCClient(object):
             Returns:
             Nothing
         """
+        from comm import protocol
+        import prc
         from comm import sendAndReceive
 
-        sendAndReceive(self._ip,self._port,data)
+        sendAndReceive(self._ip,self._port,protocol.frame(prc.PRC_CODE,(self._session_id,data)))
 
     def _receiveConsoleOutput(self):
         """
@@ -97,4 +119,14 @@ class PRCClient(object):
             Returns:
             Nothing
         """
-        #while True: print ""
+        from comm import protocol
+        import prc
+        from comm import sendAndReceive
+        import time
+
+        while True:
+            frame = sendAndReceive(self._ip,self._port,protocol.frame(prc.PRC_OUTPUT,self._session_id))
+            cmd,data = protocol.analyze(frame)
+            if data != "": print data
+
+            time.sleep(1)

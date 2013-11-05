@@ -67,11 +67,13 @@ class PRCConsole(code.InteractiveConsole):
         Variables:
         _input_queue            - Input command queue
         _output_queue           - Output data queue
+        _prompt                 - Current prompt
     """
     def __init__(self,*args,**kargs):
         import Queue
+        import threading
 
-        super(PRCConsole,self).__init__(*args,**kargs)
+        code.InteractiveConsole.__init__(self,*args,**kargs)
 
         self._input_queue = Queue.Queue()
         self._output_queue = Queue.Queue()
@@ -79,6 +81,8 @@ class PRCConsole(code.InteractiveConsole):
         console_thread = threading.Thread(target=self.interact)
         console_thread.daemon = True
         console_thread.start()
+
+        self._prompt = None
 
     def raw_input(self,prompt=None):
         """
@@ -90,9 +94,10 @@ class PRCConsole(code.InteractiveConsole):
             Returns:
             data
         """
+        self._prompt = prompt
         return self._input_queue.get()
 
-    def get_input_queue(self,input_queue,output_queue):
+    def get_input_queue(self):
         """
             Returns input queue
 
@@ -104,7 +109,7 @@ class PRCConsole(code.InteractiveConsole):
         """
         return self._input_queue
 
-    def get_output_queue(self,input_queue,output_queue):
+    def get_output_queue(self):
         """
             Returns input queue
 
@@ -115,6 +120,18 @@ class PRCConsole(code.InteractiveConsole):
             Queue
         """
         return self._output_queue
+
+    def get_prompt(self):
+        """
+            This function returns current prompt
+
+            Input:
+            Nothing
+
+            Returns:
+            prompt
+        """
+        return self._prompt
 
     def write(self,data):
         """
@@ -142,41 +159,41 @@ class PRCSocketServer(SocketServer.ThreadingTCPServer):
         self._consoles = {}
         self._consoles_lock = threading.RLock()
 
-    def add_console(self,client_id):
+    def add_console(self,session_id):
         """
             Adds new console
 
             Input:
-            client_id       - Client ID
+            session_id       - Client ID
 
             Returns:
             Nothing
         """
-        with self._consoles_lock: self._consoles[client_id] = PRCConsole()
+        with self._consoles_lock: self._consoles[session_id] = PRCConsole()
 
-    def remove_console(self,client_id):
+    def remove_console(self,session_id):
         """
             Removes client console
 
             Input:
-            client_id       - Client ID
+            session_id       - Client ID
 
             Returns:
             Nothing
         """
-        with self._consoles_lock: self._consoles.pop(client_id)
+        with self._consoles_lock: self._consoles.pop(session_id)
 
-    def get_console(self,client_id):
+    def get_console(self,session_id):
         """
             Gets client console
 
             Input:
-            client_id       - Client ID
+            session_id       - Client ID
 
             Returns:
             Console
         """
-        with self._consoles_lock: return self._consoles[client_id]
+        with self._consoles_lock: return self._consoles[session_id]
 
 ################################################################################
 ############################## Functions #######################################
@@ -192,26 +209,38 @@ def request_handler(request):
         Returns:
         Nothing
     """
-    import protocol
-    #request.server.add_console(client_id)
-    #request.server.remove_console(client_id)
-    #console = request.server.get_console(client_id)
-    #output_queue = console.get_output_queue()
-    #input_queue = console.get_input_queue()
+    from comm import protocol
+    import prc
+    import Queue
 
-    # Requestes:
-    #   Create new console for client_id
-    #   Execute commands for client_id
-    #   Sends output string continuously for client_id
-    input_data = request.receive()
+    recv_frame = request.receive()
 
-    if protocol.analyze(input_data) == protocol.PRC_NEW_SESSION:
-        #request.server.add_console(protocol.server_new_session(input_data))
-        print protocol.server_new_session(input_data)
-        output_data = protocol.confirm()
+    cmd,data = protocol.analyze(recv_frame)
+
+    if cmd == prc.PRC_NEW_SESSION:
+        request.server.add_console(data)
+        send_frame = protocol.frame(prc.PRC_CONFIRM)
+
+    elif cmd == prc.PRC_OUTPUT:
+        output_queue = request.server.get_console(data).get_output_queue()
+        output = ""
+        while True:
+            try: output += output_queue.get(False)
+            except Queue.Empty: break
+        send_frame = protocol.frame(prc.PRC_OUTPUT,output)
+
+    elif cmd == prc.PRC_PROMPT:
+        prompt = request.server.get_console(data).get_prompt()
+        send_frame = protocol.frame(prc.PRC_PROMPT,prompt)
+
+    elif cmd == prc.PRC_CODE:
+        session_id, code = data
+        input_queue = request.server.get_console(session_id).get_input_queue()
+        input_queue.put(code)
+        send_frame = protocol.frame(prc.PRC_CONFIRM)
+
     else:
-        pass
-        #Not implemented
+        raise PRCServerException("Not implemented!")
 
-    request.send(output_data)
+    request.send(send_frame)
     request.close()
