@@ -68,6 +68,8 @@ class PRCConsole(code.InteractiveConsole):
         _input_queue            - Input command queue
         _output_queue           - Output data queue
         _prompt                 - Current prompt
+        _code_executed          - Code executed by interpreter event
+        _prompt_ready           - Prompt ready event
     """
     def __init__(self,*args,**kargs):
         import Queue
@@ -78,11 +80,13 @@ class PRCConsole(code.InteractiveConsole):
         self._input_queue = Queue.Queue()
         self._output_queue = Queue.Queue()
 
+        self._prompt = None
+        self._code_executed = threading.Event()
+        self._prompt_ready = threading.Event()
+
         console_thread = threading.Thread(target=self.interact)
         console_thread.daemon = True
         console_thread.start()
-
-        self._prompt = None
 
     def raw_input(self,prompt=None):
         """
@@ -95,6 +99,7 @@ class PRCConsole(code.InteractiveConsole):
             data
         """
         self._prompt = prompt
+        self._prompt_ready.set()
         return self._input_queue.get()
 
     def get_input_queue(self):
@@ -131,6 +136,7 @@ class PRCConsole(code.InteractiveConsole):
             Returns:
             prompt
         """
+        self._prompt_ready.wait()
         return self._prompt
 
     def write(self,data):
@@ -144,6 +150,33 @@ class PRCConsole(code.InteractiveConsole):
             Nothing
         """
         self._output_queue.put(data)
+
+    def wait_for_code(self):
+        """
+            This function waits for code to be executed on server
+
+            Input:
+            Nothing
+
+            Returns:
+            Nothing
+        """
+        self._code_executed.wait()
+        self._code_executed.clear()
+
+    def push(self,*args,**kargs):
+        """
+            Adding synchronization elements
+
+            Input:
+            Nothing
+
+            Returns:
+            Nothing
+        """
+        return_value = code.InteractiveConsole.push(self,*args,**kargs)
+        self._code_executed.set()
+        return return_value
 
 class PRCSocketServer(SocketServer.ThreadingTCPServer):
     """
@@ -223,11 +256,13 @@ def request_handler(request):
 
     elif cmd == prc.PRC_OUTPUT:
         output_queue = request.server.get_console(data).get_output_queue()
-        output = ""
+        output = []
         while True:
-            try: output += output_queue.get(False)
+            try: output.append(output_queue.get(False))
             except Queue.Empty: break
-        send_frame = protocol.frame(prc.PRC_OUTPUT,output)
+
+        if output != []: send_frame = protocol.frame(prc.PRC_OUTPUT,"".join(output))
+        else: send_frame = protocol.frame(prc.PRC_OUTPUT)
 
     elif cmd == prc.PRC_PROMPT:
         prompt = request.server.get_console(data).get_prompt()
@@ -237,6 +272,7 @@ def request_handler(request):
         session_id, code = data
         input_queue = request.server.get_console(session_id).get_input_queue()
         input_queue.put(code)
+        request.server.get_console(session_id).wait_for_code()
         send_frame = protocol.frame(prc.PRC_CONFIRM)
 
     else:

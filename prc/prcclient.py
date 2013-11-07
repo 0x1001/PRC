@@ -14,7 +14,6 @@ class PRCClient(object):
         _session_id             - Client session id
         _ip                     - Server ip address
         _port                   - Server port
-        _console_output_thread  - Console output thread
     """
     def __init__(self,ip=None,port=None):
         from comm import getHostName
@@ -27,8 +26,6 @@ class PRCClient(object):
         self._ip = ip if ip else getHostName()
         self._port = port if port else prcserver.DEFAULT_PORT
 
-        self._console_output_thread = threading.Thread(target=self._receiveConsoleOutput)
-
     def start(self):
         """
             This function starts RPCClient
@@ -40,8 +37,6 @@ class PRCClient(object):
             Nothing
         """
         self._start_session()
-        self._console_output_thread.start()
-
         self._input()
 
     def _start_session(self):
@@ -59,6 +54,7 @@ class PRCClient(object):
         from comm import sendAndReceive
 
         sendAndReceive(self._ip,self._port,protocol.frame(prc.PRC_NEW_SESSION,self._session_id))
+        self._receiveConsoleOutput()
 
     def _prompt(self):
         """
@@ -105,16 +101,21 @@ class PRCClient(object):
         from comm import protocol
         import prc
         from comm import sendAndReceive
+        import threading
 
+        console_output_exit = threading.Event()
+        console_output_thread = threading.Thread(target=self._receiveConsoleOutputThread,args=(console_output_exit,))
+        console_output_thread.start()
         sendAndReceive(self._ip,self._port,protocol.frame(prc.PRC_CODE,(self._session_id,data)))
+        console_output_exit.set()
+        console_output_thread.join()
 
     def _receiveConsoleOutput(self):
         """
-            This function polls for console output
+            This function receives and prints console output
 
             Input:
-            ip          - Server address
-            port        - Server port
+            Nothing
 
             Returns:
             Nothing
@@ -122,11 +123,28 @@ class PRCClient(object):
         from comm import protocol
         import prc
         from comm import sendAndReceive
-        import time
 
+        frame = sendAndReceive(self._ip,self._port,protocol.frame(prc.PRC_OUTPUT,self._session_id))
+        cmd,data = protocol.analyze(frame)
+        if data: print data
+
+    def _receiveConsoleOutputThread(self,console_output_exit):
+        """
+            This function polls for console output
+
+            Input:
+            console_output_exit     - Console exit event
+
+            Returns:
+            Nothing
+        """
+        from comm import protocol
+        import prc
+        from comm import sendAndReceive
+
+        exit_flag = False
         while True:
-            frame = sendAndReceive(self._ip,self._port,protocol.frame(prc.PRC_OUTPUT,self._session_id))
-            cmd,data = protocol.analyze(frame)
-            if data != "": print data
+            self._receiveConsoleOutput()
 
-            time.sleep(1)
+            if exit_flag: break
+            if console_output_exit.wait(1): exit_flag = True

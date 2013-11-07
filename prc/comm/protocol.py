@@ -17,12 +17,7 @@ def frame(cmd,data=None):
         Returns:
         protocol_data       - Protocol frame
     """
-    import xml.etree.ElementTree as ET
-
-    root = ET.Element(cmd)
-    root.text = _encode(data)
-
-    return ET.tostring(root,encoding="us-ascii",method="xml")
+    return _encode((cmd,data))
 
 def analyze(frame):
     """
@@ -34,14 +29,7 @@ def analyze(frame):
         Retruns:
         command, data
     """
-    import xml.etree.ElementTree as ET
-
-    try:
-        root = ET.fromstring(frame)
-    except ET.ParseError as error:
-        raise ProtocolException(str(error))
-
-    return root.tag,_decode(root.text)
+    return _decode(frame)
 
 ################################################################################
 ############################## Functions #######################################
