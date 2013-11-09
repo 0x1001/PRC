@@ -36,6 +36,8 @@ class PRCServer(object):
         self._comm_server_thread = threading.Thread(target=self._comm_server.serve_forever)
         self._comm_server_thread.daemon = True
 
+        self.add_variable = self._comm_server.add_local_variable
+
     def start(self):
         """
             Starts server
@@ -70,13 +72,16 @@ class PRCConsole(code.InteractiveConsole):
         _prompt                 - Current prompt
         _code_executed          - Code executed by interpreter event
         _prompt_ready           - Prompt ready event
-        _exit_flag              - Exit event
+        _exit                   - Exit event
     """
-    def __init__(self,*args,**kargs):
+    def __init__(self,locals={}):
         import Queue
         import threading
 
-        code.InteractiveConsole.__init__(self,*args,**kargs)
+        locals["__prcconsole__"] = self
+        locals["__name__"] = "__prcconsole__"
+        locals["__doc__"] = "Python Remote Console"
+        code.InteractiveConsole.__init__(self,locals,filename="<PRCConsole>")
 
         self._input_queue = Queue.Queue()
         self._output_queue = Queue.Queue()
@@ -84,7 +89,7 @@ class PRCConsole(code.InteractiveConsole):
         self._prompt = None
         self._code_executed = threading.Event()
         self._prompt_ready = threading.Event()
-        self._exit_flag = threading.Event()
+        self._exit = threading.Event()
 
         console_thread = threading.Thread(target=self.interact)
         console_thread.daemon = True
@@ -178,15 +183,15 @@ class PRCConsole(code.InteractiveConsole):
         """
         try: return_value = code.InteractiveConsole.push(self,*args,**kargs)
         except SystemExit:
-            self._exit_flag.set()
+            self._exit.set()
             raise
         finally: self._code_executed.set()
 
         return return_value
 
-    def is_running(self):
+    def is_system_exit(self):
         """
-            Checks if console is still running
+            Checks if console is exited
 
             Input:
             Nothing
@@ -194,7 +199,7 @@ class PRCConsole(code.InteractiveConsole):
             Returns:
             True/False
         """
-        return not self._exit_flag.is_set()
+        return self._exit.is_set()
 
 class PRCSocketServer(SocketServer.ThreadingTCPServer):
     """
@@ -202,6 +207,7 @@ class PRCSocketServer(SocketServer.ThreadingTCPServer):
 
         Variables:
         _consoles       - Dictionary with consoles
+        _locals         - Custom locals for PRCConsole
     """
     def __init__(self,*args,**kargs):
         import threading
@@ -209,6 +215,20 @@ class PRCSocketServer(SocketServer.ThreadingTCPServer):
         SocketServer.ThreadingTCPServer.__init__(self,*args,**kargs)
         self._consoles = {}
         self._consoles_lock = threading.RLock()
+        self._locals = {}
+
+    def add_local_variable(self,name,value):
+        """
+            This function adds locals for PRCConsole
+
+            Input:
+            name        - Variable name
+            value       - Variable value
+
+            Returns:
+            Nothing
+        """
+        self._locals[name] = value
 
     def add_console(self,session_id):
         """
@@ -220,7 +240,7 @@ class PRCSocketServer(SocketServer.ThreadingTCPServer):
             Returns:
             Nothing
         """
-        with self._consoles_lock: self._consoles[session_id] = PRCConsole()
+        with self._consoles_lock: self._consoles[session_id] = PRCConsole(self._locals)
 
     def remove_console(self,session_id):
         """
@@ -290,10 +310,11 @@ def request_handler(request):
         session_id, code = data
         request.server.get_console(session_id).get_input_queue().put(code)
         request.server.get_console(session_id).wait_for_code()
-        is_running = request.server.get_console(session_id).is_running()
 
-        if is_running: send_frame = protocol.frame(prc.PRC_CONFIRM)
-        else: send_frame = protocol.frame(prc.PRC_EXIT)
+        if request.server.get_console(session_id).is_system_exit():
+            send_frame = protocol.frame(prc.PRC_EXIT)
+        else:
+            send_frame = protocol.frame(prc.PRC_CONFIRM)
 
     else:
         raise PRCServerException("Not implemented! " + str(cmd))
