@@ -1,5 +1,5 @@
 import code
-import prcexception
+import prc
 import SocketServer
 ################################################################################
 ############################## Constants #######################################
@@ -9,7 +9,7 @@ DEFAULT_PORT = 49988
 ################################################################################
 ############################## Classes #########################################
 ################################################################################
-class PRCServerException(prcexception.PRCException): pass
+class PRCServerException(prc.PRCException): pass
 
 class PRCServer(object):
     """
@@ -18,8 +18,6 @@ class PRCServer(object):
         Variables:
         _comm_server            - Socket server
         _comm_server_thread     - Communication Thread
-        _ip                     - Server address
-        _port                   - Server port
     """
     def __init__(self,ip=None,port=None):
         from comm import getHostName
@@ -27,10 +25,10 @@ class PRCServer(object):
         from comm import CommServerException
         import threading
 
-        self._ip = ip if ip else getHostName()
-        self._port = port if port else DEFAULT_PORT
+        ip = ip if ip else getHostName()
+        port = port if port else DEFAULT_PORT
 
-        try: self._comm_server = server_factory(self._ip,self._port,request_handler,PRCSocketServer)
+        try: self._comm_server = server_factory(ip,port,request_handler,PRCSocketServer)
         except CommServerException as error: raise PRCServerException(error)
 
         self._comm_server_thread = threading.Thread(target=self._comm_server.serve_forever)
@@ -61,6 +59,7 @@ class PRCServer(object):
             Nothing
         """
         self._comm_server.shutdown()
+        self._comm_server_thread.join()
 
 class PRCConsole(code.InteractiveConsole):
     """
@@ -81,6 +80,7 @@ class PRCConsole(code.InteractiveConsole):
         locals["__prcconsole__"] = self
         locals["__name__"] = "__prcconsole__"
         locals["__doc__"] = "Python Remote Console"
+
         code.InteractiveConsole.__init__(self,locals,filename="<PRCConsole>")
 
         self._input_queue = Queue.Queue()
@@ -207,6 +207,7 @@ class PRCSocketServer(SocketServer.ThreadingTCPServer):
 
         Variables:
         _consoles       - Dictionary with consoles
+        _consoles_lock  - Lock for consoles dictonary
         _locals         - Custom locals for PRCConsole
     """
     def __init__(self,*args,**kargs):
@@ -281,7 +282,6 @@ def request_handler(request):
         Nothing
     """
     from comm import protocol
-    import prc
     import Queue
 
     recv_frame = request.receive()
