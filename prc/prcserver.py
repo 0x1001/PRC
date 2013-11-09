@@ -70,6 +70,7 @@ class PRCConsole(code.InteractiveConsole):
         _prompt                 - Current prompt
         _code_executed          - Code executed by interpreter event
         _prompt_ready           - Prompt ready event
+        _exit_flag              - Exit event
     """
     def __init__(self,*args,**kargs):
         import Queue
@@ -83,6 +84,7 @@ class PRCConsole(code.InteractiveConsole):
         self._prompt = None
         self._code_executed = threading.Event()
         self._prompt_ready = threading.Event()
+        self._exit_flag = threading.Event()
 
         console_thread = threading.Thread(target=self.interact)
         console_thread.daemon = True
@@ -174,9 +176,25 @@ class PRCConsole(code.InteractiveConsole):
             Returns:
             Nothing
         """
-        return_value = code.InteractiveConsole.push(self,*args,**kargs)
-        self._code_executed.set()
+        try: return_value = code.InteractiveConsole.push(self,*args,**kargs)
+        except SystemExit:
+            self._exit_flag.set()
+            raise
+        finally: self._code_executed.set()
+
         return return_value
+
+    def is_running(self):
+        """
+            Checks if console is still running
+
+            Input:
+            Nothing
+
+            Returns:
+            True/False
+        """
+        return not self._exit_flag.is_set()
 
 class PRCSocketServer(SocketServer.ThreadingTCPServer):
     """
@@ -270,13 +288,15 @@ def request_handler(request):
 
     elif cmd == prc.PRC_CODE:
         session_id, code = data
-        input_queue = request.server.get_console(session_id).get_input_queue()
-        input_queue.put(code)
+        request.server.get_console(session_id).get_input_queue().put(code)
         request.server.get_console(session_id).wait_for_code()
-        send_frame = protocol.frame(prc.PRC_CONFIRM)
+        is_running = request.server.get_console(session_id).is_running()
+
+        if is_running: send_frame = protocol.frame(prc.PRC_CONFIRM)
+        else: send_frame = protocol.frame(prc.PRC_EXIT)
 
     else:
-        raise PRCServerException("Not implemented!")
+        raise PRCServerException("Not implemented! " + str(cmd))
 
     request.send(send_frame)
     request.close()
