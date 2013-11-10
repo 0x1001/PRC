@@ -13,10 +13,11 @@ This can have several applications including:
 - Remote Procedure Call (RPC). PRCClient can remotely start processes, applications, other executables on PRCServer.
 
 PRCServer usage example
-=======================
+-----------------------
 PRCServer runs socket server that spawns Python console for each PRCClient.
 
 example_server.py::
+    
     from prc import PRCServer
     import time
 
@@ -38,10 +39,11 @@ example_server.py::
         time.sleep(1)
 
 PRCClient usage example
-=======================
+-----------------------
 PRCClient connects to PRCServer console and acts as a proxy.
 
 example_client.py::
+    
     from prc import PRCClient
 
     # Starts PRCClient
@@ -55,6 +57,7 @@ example_client.py::
     PRCClient().start()
     
 PRCClient client console looks like this::
+    
     Python 2.7.3 (default, Apr 10 2012, 23:31:26) [MSC v.1500 32 bit (Intel)] on win32
     Type "help", "copyright", "credits" or "license" for more information.
     (PRCConsole)
@@ -74,7 +77,7 @@ PRCClient client console looks like this::
 PRCClient constructor accepts two input paramiters: server address and port.
 
 Contribution
-============
+------------
 Anyone is welcome to contribute to this project. Source code is available on GitHub.
 https://github.com/0x1001/PRC
 
