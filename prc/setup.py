@@ -11,5 +11,4 @@ setup(
     license='LICENSE.txt',
     description='Python Remote Console',
     long_description=open('README.txt').read(),
-    install_requires=[],
 )
