@@ -20,12 +20,11 @@ class PRCServer(object):
         _comm_server_thread     - Communication Thread
     """
     def __init__(self,ip=None,port=None):
-        from comm import getHostName
         from comm import server_factory
         from comm import CommServerException
         import threading
 
-        ip = ip if ip else getHostName()
+        ip = ip if ip else ""
         port = port if port else DEFAULT_PORT
 
         try: self._comm_server = server_factory(ip,port,request_handler,PRCSocketServer)
@@ -33,8 +32,6 @@ class PRCServer(object):
 
         self._comm_server_thread = threading.Thread(target=self._comm_server.serve_forever)
         self._comm_server_thread.daemon = True
-
-        self.add_variable = self._comm_server.add_local_variable
 
     def start(self):
         """
@@ -60,6 +57,19 @@ class PRCServer(object):
         """
         self._comm_server.shutdown()
         self._comm_server_thread.join()
+
+    def add_variable(self,name,value):
+        """
+            This function adds locals for PRCConsole
+
+            Input:
+            name        - Variable name
+            value       - Variable value
+
+            Returns:
+            Nothing
+        """
+        self._comm_server.add_local_variable(name,value)
 
 class PRCConsole(code.InteractiveConsole):
     """

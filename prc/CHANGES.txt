@@ -1,1 +1,12 @@
-v0.9.0, 2013-11-10 -- Initial release.
+0.9.0 - 2013-11-10
+------------------ 
+
+- Initial release.
+
+
+0.9.1 - ..........
+
+- Fix for PRCServer init with no parameters on Linux. Default IP address is empty string instead of host name.
+
+- Connection errors within PRCClient functions raise PRCClientException instead of CommException
+

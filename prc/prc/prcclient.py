@@ -52,9 +52,10 @@ class PRCClient(object):
             Returns:
             Nothing
         """
-        from comm import protocol, sendAndReceive
+        from comm import protocol, sendAndReceive, CommClientException
 
-        sendAndReceive(self._ip,self._port,protocol.frame(prc.PRC_NEW_SESSION,self._session_id))
+        try: sendAndReceive(self._ip,self._port,protocol.frame(prc.PRC_NEW_SESSION,self._session_id))
+        except CommClientException as error: raise PRCClientException("Connection problem: " + str(error))
         self._receiveConsoleOutput()
 
     def _prompt(self):
@@ -67,9 +68,10 @@ class PRCClient(object):
             Returns:
             prompt
         """
-        from comm import protocol, sendAndReceive
+        from comm import protocol, sendAndReceive, CommClientException
 
-        frame = sendAndReceive(self._ip,self._port,protocol.frame(prc.PRC_PROMPT,self._session_id))
+        try: frame = sendAndReceive(self._ip,self._port,protocol.frame(prc.PRC_PROMPT,self._session_id))
+        except CommClientException as error: raise PRCClientException("Connection problem: " + str(error))
         cmd,prompt = protocol.analyze(frame)
 
         return prompt
@@ -98,14 +100,17 @@ class PRCClient(object):
             Returns:
             Nothing
         """
-        from comm import protocol, sendAndReceive
+        from comm import protocol, sendAndReceive, CommClientException
         import threading
 
         console_output_exit = threading.Event()
         console_output_thread = threading.Thread(target=self._receiveConsoleOutputThread,args=(console_output_exit,))
         console_output_thread.start()
-        frame = sendAndReceive(self._ip,self._port,protocol.frame(prc.PRC_CODE,(self._session_id,data)))
-        console_output_exit.set()
+
+        try: frame = sendAndReceive(self._ip,self._port,protocol.frame(prc.PRC_CODE,(self._session_id,data)))
+        except CommClientException as error: raise PRCClientException("Connection problem: " + str(error))
+        finally: console_output_exit.set()
+
         console_output_thread.join()
         cmd,data = protocol.analyze(frame)
 
@@ -121,9 +126,11 @@ class PRCClient(object):
             Returns:
             Nothing
         """
-        from comm import protocol, sendAndReceive
+        from comm import protocol, sendAndReceive, CommClientException
 
-        frame = sendAndReceive(self._ip,self._port,protocol.frame(prc.PRC_OUTPUT,self._session_id))
+        try: frame = sendAndReceive(self._ip,self._port,protocol.frame(prc.PRC_OUTPUT,self._session_id))
+        except CommClientException as error: raise PRCClientException("Connection problem: " + str(error))
+
         cmd,data = protocol.analyze(frame)
         if data: print data
 
