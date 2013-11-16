@@ -15,3 +15,4 @@ prc\comm\commclient.py
 prc\comm\commserver.py
 prc\comm\protocol.py
 prc\test\__init__.py
+prc\test\prc_test.py

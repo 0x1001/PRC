@@ -12,11 +12,13 @@ This can have several applications including:
 - Runtime debugging of complex Python scripts. PRCServer can be configured to access script internal variables, objects, states.
 - Remote Procedure Call (RPC). PRCClient can remotely start processes, applications, other executables on PRCServer.
 
+PRC is writen in Python 2.7 and works on Windows and Linux. Source code can be found here: https://github.com/0x1001/PRC
+
 PRCServer usage example
 -----------------------
 PRCServer runs socket server that spawns Python console for each PRCClient.
 
-example_server.py::
+example_server.py:
     
     from prc import PRCServer
     import time
@@ -42,7 +44,7 @@ PRCClient usage example
 -----------------------
 PRCClient connects to PRCServer console and acts as a proxy.
 
-example_client.py::
+example_client.py:
     
     from prc import PRCClient
 
@@ -56,7 +58,7 @@ example_client.py::
     # Type exit() for exit.
     PRCClient().start()
     
-PRCClient client console looks like this::
+PRCClient client console looks like this:
     
     Python 2.7.3 (default, Apr 10 2012, 23:31:26) [MSC v.1500 32 bit (Intel)] on win32
     Type "help", "copyright", "credits" or "license" for more information.
