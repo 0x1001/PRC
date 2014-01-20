@@ -11,16 +11,11 @@ class CommClient(comm.Comm):
         This class is responsible for Client communication
 
         Constants:
-        MAX_RETRY           - Max client retry if cannot connect to server
-        CONNECTION_TIMEOUT  - Time between next connection attempt in case of connection interrupt
 
         Variables:
         socket_reference    - socket handle
         connection_attempt  - Number of connection retry
     """
-    MAX_RETRY = 2
-    CONNECTION_TIMEOUT = 2
-
     def __init__(self):
         self.open()
         self.connection_attempt = 1
@@ -40,18 +35,12 @@ class CommClient(comm.Comm):
         import time
         import socket
 
-        if self.connection_attempt > self.MAX_RETRY:
-            raise CommClientException("Cannot connect to " + ip + ":" + str(port))
-
         try:
             self.socket_reference.connect((ip, port))
         except socket.error:
-            self.connection_attempt += 1
             self.close()
-            time.sleep(self.CONNECTION_TIMEOUT)
             reload(socket)
-            self.open()
-            self.connect(ip,port)
+            raise CommClientException("Cannot connect to " + ip + ":" + str(port))
 
     def _lowLevelRecv(self,buffer):
         """
@@ -63,7 +52,12 @@ class CommClient(comm.Comm):
             Returns:
             Received data
         """
-        return self.socket_reference.recv(buffer)
+        import socket
+
+        try: data = self.socket_reference.recv(buffer)
+        except socket.error as error: raise CommClientException(str(error))
+
+        return data
 
     def _lowLevelSend(self,data):
         """
@@ -101,12 +95,13 @@ class CommClient(comm.Comm):
         """
         import socket
         self.socket_reference = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.socket_reference.settimeout(self.RECV_TIMEOUT)
 
 ######################################################################################
 ################################### Functions ########################################
 ######################################################################################
 
-def sendAndReceive(ip,port,data_to_send,retry=None):
+def sendAndReceive(ip,port,data_to_send,retry=3):
     """
         This function sends and receives frames from server
 
@@ -117,10 +112,14 @@ def sendAndReceive(ip,port,data_to_send,retry=None):
         Received data
     """
     connection = CommClient()
-    if retry != None: connection.MAX_RETRY = retry
-    connection.connect(ip,port)
-    connection.send(data_to_send)
-    data_received = connection.receive()
-    connection.close()
+    try:
+        connection.connect(ip,port)
+        connection.send(data_to_send)
+        data_received = connection.receive()
+        connection.close()
+    except (CommClientException,comm.CommException) as error:
+        if retry == 0: raise
+        retry -= 1
+        data_received = sendAndReceive(ip,port,data_to_send,retry)
 
     return data_received

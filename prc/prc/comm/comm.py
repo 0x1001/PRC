@@ -10,11 +10,13 @@ class Comm(object):
         Constants:
         ACKNOWLEDGE     - Acknowledge string used to handshake
         BUFFER_SIZE     - Receive buffer size
+        RECV_TIMEOUT    - Receive timeout
 
         Variable:
     """
     ACKNOWLEDGE = b'ACKNOWLEDGE'
     BUFFER_SIZE = 4096
+    RECV_TIMEOUT = 30
 
     def send(self,data):
         """
@@ -66,10 +68,10 @@ class Comm(object):
             data        - Received data
         """
         data_received = self._lowLevelRecv(self.BUFFER_SIZE)
-        try:
-            data_length = int(data_received)
-        except ValueError:
-            return None
+
+        try: data_length = int(data_received)
+        except ValueError: raise CommException("Received data length is invalid.")
+
         self._lowLevelSend(self.ACKNOWLEDGE)
         received_data_length = 0
         data_received = ""
