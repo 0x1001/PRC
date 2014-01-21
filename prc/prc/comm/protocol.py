@@ -45,9 +45,10 @@ def _encode(data):
         Returns:
         data        - Encoded data
     """
-    import pickle
     import base64
-    return base64.b64encode(pickle.dumps(data))
+    import cPickle
+
+    return base64.b64encode(cPickle.dumps(data))
 
 def _decode(data):
     """
@@ -59,6 +60,7 @@ def _decode(data):
         Returns:
         data        - Decoded data
     """
-    import pickle
     import base64
-    return pickle.loads(base64.b64decode(data))
+    import cPickle
+
+    return cPickle.loads(base64.b64decode(data))
