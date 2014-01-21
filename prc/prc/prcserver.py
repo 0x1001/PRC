@@ -291,10 +291,15 @@ def request_handler(request):
         Returns:
         Nothing
     """
-    from comm import protocol
+    from comm import protocol,CommException
     import Queue
 
-    recv_frame = request.receive()
+    try:
+        recv_frame = request.receive()
+    except CommException as error:
+        print error
+        request.close()
+        return
 
     cmd,data = protocol.analyze(recv_frame)
 

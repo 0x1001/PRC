@@ -95,7 +95,6 @@ class CommClient(comm.Comm):
         """
         import socket
         self.socket_reference = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.socket_reference.settimeout(self.RECV_TIMEOUT)
 
 ######################################################################################
 ################################### Functions ########################################
@@ -117,8 +116,9 @@ def sendAndReceive(ip,port,data_to_send,retry=3):
         connection.send(data_to_send)
         data_received = connection.receive()
         connection.close()
-    except (CommClientException,comm.CommException) as error:
-        if retry == 0: raise
+    except comm.CommException as error:
+        if retry == 0: raise CommClientException(str(error))
+        print error + "  Retrying ... " + str(retry)
         retry -= 1
         data_received = sendAndReceive(ip,port,data_to_send,retry)
 

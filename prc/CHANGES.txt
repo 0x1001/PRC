@@ -13,10 +13,15 @@
 
 - Basic test has been added.
 
-0.9.2 - 2013-11-21
+0.9.2 - 2014-01-21
 ------------------
 
 - Communication protocol fix. Added timeout to receive functions.
 
 - cpickle is used instead of pickle for better performance.
+
+0.9.3 - 2014-01-21
+------------------
+
+- Communication protocol fix. Adding proper exception handling.
 
