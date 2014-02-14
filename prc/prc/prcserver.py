@@ -308,18 +308,17 @@ def request_handler(request):
         send_frame = protocol.frame(prc.PRC_CONFIRM)
 
     elif cmd == prc.PRC_OUTPUT:
-        output_queue = request.server.get_console(data).get_output_queue()
-        output = []
-        while True:
-            try: output.append(output_queue.get(False))
-            except Queue.Empty: break
+        output = request.server.get_console(data).get_output_queue().get()
 
-        if output != []: send_frame = protocol.frame(prc.PRC_OUTPUT,"".join(output))
-        else: send_frame = protocol.frame(prc.PRC_OUTPUT)
+        if type(output) == str:
+            send_frame = protocol.frame(prc.PRC_OUTPUT,output)
+        elif type(output) == prc.PRCCmd:
+            send_frame = protocol.frame(output)
 
     elif cmd == prc.PRC_PROMPT:
         prompt = request.server.get_console(data).get_prompt()
         send_frame = protocol.frame(prc.PRC_PROMPT,prompt)
+        request.server.get_console(data).write(prc.PRC_CONFIRM)
 
     elif cmd == prc.PRC_CODE:
         session_id, code = data
@@ -328,8 +327,10 @@ def request_handler(request):
 
         if request.server.get_console(session_id).is_system_exit():
             send_frame = protocol.frame(prc.PRC_EXIT)
+            request.server.get_console(session_id).write(prc.PRC_EXIT)
         else:
             send_frame = protocol.frame(prc.PRC_CONFIRM)
+            request.server.get_console(session_id).write(prc.PRC_CONFIRM)
 
     else:
         raise PRCServerException("Not implemented! " + str(cmd))

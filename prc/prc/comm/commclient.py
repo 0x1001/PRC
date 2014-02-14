@@ -117,8 +117,8 @@ def sendAndReceive(ip,port,data_to_send,retry=3):
         data_received = connection.receive()
         connection.close()
     except comm.CommException as error:
-        if retry == 0: raise CommClientException(str(error))
-        print error + "  Retrying ... " + str(retry)
+        if retry == 0: raise CommClientException(error)
+        print str(error) + "  Retrying ... " + str(retry)
         retry -= 1
         data_received = sendAndReceive(ip,port,data_to_send,retry)
 
