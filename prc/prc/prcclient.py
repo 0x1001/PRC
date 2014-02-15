@@ -18,14 +18,13 @@ class PRCClient(object):
         _output_thread          - Output thread reference
     """
     def __init__(self,ip="127.0.0.1",port=prc.DEFAULT_PORT):
-        from comm import getHostName
-        import time
+        import uuid
         import threading
 
         self._ip = ip
         self._port = port
 
-        self._session_id = getHostName() + "_" + str(time.time()).replace(".","")
+        self._session_id = uuid.uuid4().get_hex()
 
         self._output_thread = threading.Thread(target=self._receiveConsoleOutput)
         self._output_thread.daemon = True
