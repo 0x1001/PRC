@@ -20,10 +20,13 @@
 
 - cpickle is used instead of pickle for better performance.
 
-0.9.3 - 2014-01-21
+0.9.3 - 2014-02-15
 ------------------
 
 - Communication protocol fix. Adding proper exception handling.
+
 - PRCClient console improved. Polling mode.
+
 - Default IP address is set to 127.0.0.1 instead of localhost name
 
+- Session ID is generated with uuid instead of time.
