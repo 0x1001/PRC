@@ -17,16 +17,15 @@ class PRCClient(object):
         _exit                   - Exit Event
         _output_thread          - Output thread reference
     """
-    def __init__(self,ip=None,port=None):
+    def __init__(self,ip="127.0.0.1",port=prc.DEFAULT_PORT):
         from comm import getHostName
         import time
         import threading
-        import prcserver
+
+        self._ip = ip
+        self._port = port
 
         self._session_id = getHostName() + "_" + str(time.time()).replace(".","")
-
-        self._ip = ip if ip else getHostName()
-        self._port = port if port else prcserver.DEFAULT_PORT
 
         self._output_thread = threading.Thread(target=self._receiveConsoleOutput)
         self._output_thread.daemon = True
@@ -51,7 +50,8 @@ class PRCClient(object):
         self._output_thread.start()
         self._input_thread.start()
 
-        self._exit.wait()
+        while True:
+            if self._exit.wait(0.2): break
 
     def _start_session(self):
         """
@@ -141,6 +141,7 @@ class PRCClient(object):
             Returns:
             Nothing
         """
+        import sys
         from comm import protocol, sendAndReceive, CommClientException
 
         while True:
@@ -154,8 +155,7 @@ class PRCClient(object):
 
             cmd,data = protocol.analyze(frame)
             if cmd == prc.PRC_OUTPUT:
-                if data.endswith("\n"): print data[:-1]
-                else: print data
+                sys.stdout.write(data)
             elif cmd == prc.PRC_CONFIRM:
                 self._synch.release()
             elif cmd == prc.PRC_EXIT:

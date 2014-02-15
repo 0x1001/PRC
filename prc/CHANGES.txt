@@ -24,4 +24,6 @@
 ------------------
 
 - Communication protocol fix. Adding proper exception handling.
+- PRCClient console improved. Polling mode.
+- Default IP address is set to 127.0.0.1 instead of localhost name
 

@@ -4,7 +4,6 @@ import SocketServer
 ################################################################################
 ############################## Constants #######################################
 ################################################################################
-DEFAULT_PORT = 49988
 
 ################################################################################
 ############################## Classes #########################################
@@ -19,13 +18,10 @@ class PRCServer(object):
         _comm_server            - Socket server
         _comm_server_thread     - Communication Thread
     """
-    def __init__(self,ip=None,port=None):
+    def __init__(self,ip="",port=prc.DEFAULT_PORT):
         from comm import server_factory
         from comm import CommServerException
         import threading
-
-        ip = ip if ip else ""
-        port = port if port else DEFAULT_PORT
 
         try: self._comm_server = server_factory(ip,port,request_handler,PRCSocketServer)
         except CommServerException as error: raise PRCServerException(error)
@@ -335,5 +331,9 @@ def request_handler(request):
     else:
         raise PRCServerException("Not implemented! " + str(cmd))
 
-    request.send(send_frame)
-    request.close()
+    try:
+        request.send(send_frame)
+    except CommException as error:
+        print error
+    finally:
+        request.close()

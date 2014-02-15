@@ -69,7 +69,12 @@ class CommClient(comm.Comm):
             Returns:
             Send data size
         """
-        return self.socket_reference.send(data)
+        import socket
+        
+        try: size = self.socket_reference.send(data)
+        except socket.error as error: raise CommClientException(str(error)) 
+        
+        return  size
 
     def _lowLevelClose(self):
         """
