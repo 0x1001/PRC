@@ -10,13 +10,11 @@ class Comm(object):
         Constants:
         ACKNOWLEDGE     - Acknowledge string used to handshake
         BUFFER_SIZE     - Receive buffer size
-        RECV_TIMEOUT    - Receive timeout
 
         Variable:
     """
     ACKNOWLEDGE = b'ACKNOWLEDGE'
     BUFFER_SIZE = 4096
-    RECV_TIMEOUT = 30
 
     def send(self,data):
         """
