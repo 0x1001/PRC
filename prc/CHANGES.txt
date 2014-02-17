@@ -20,7 +20,7 @@
 
 - cpickle is used instead of pickle for better performance.
 
-0.9.3 - 2014-02-15
+0.9.3 - 2014-02-17
 ------------------
 
 - Communication protocol fix. Adding proper exception handling.

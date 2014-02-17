@@ -2,7 +2,7 @@ from distutils.core import setup
 
 setup(
     name='PRC',
-    version='0.9.2',
+    version='0.9.3',
     author='Damian Nowok',
     author_email='damian.nowok@gmail.com',
     packages=['prc', 'prc.test', 'prc.comm'],
