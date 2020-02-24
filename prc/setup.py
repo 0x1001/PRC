@@ -11,4 +11,7 @@ setup(
     license='LICENSE.txt',
     description='Python Remote Console',
     long_description=open('README.txt').read(),
+    classifiers=[
+        "Programming Language :: Python :: 3"
+    ],
 )
