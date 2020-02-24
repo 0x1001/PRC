@@ -1,5 +1,9 @@
+from __future__ import absolute_import
+from builtins import input
+from builtins import str
+from builtins import object
 import code
-import prc
+from . import prc
 ################################################################################
 ############################## Classes #########################################
 ################################################################################
@@ -62,7 +66,7 @@ class PRCClient(object):
             Returns:
             Nothing
         """
-        from comm import protocol, sendAndReceive, CommClientException
+        from .comm import protocol, sendAndReceive, CommClientException
 
         try:
             sendAndReceive(self._ip,self._port,protocol.frame(prc.PRC_NEW_SESSION,self._session_id))
@@ -80,7 +84,7 @@ class PRCClient(object):
             Returns:
             Nothing
         """
-        while not self._exit.is_set(): self._sendConsoleInput(raw_input(self._prompt()))
+        while not self._exit.is_set(): self._sendConsoleInput(input(self._prompt()))
 
     def _prompt(self):
         """
@@ -92,7 +96,7 @@ class PRCClient(object):
             Returns:
             prompt
         """
-        from comm import protocol, sendAndReceive, CommClientException
+        from .comm import protocol, sendAndReceive, CommClientException
 
         try:
             frame = sendAndReceive(self._ip,self._port,protocol.frame(prc.PRC_PROMPT,self._session_id))
@@ -117,7 +121,7 @@ class PRCClient(object):
             Returns:
             Nothing
         """
-        from comm import protocol, sendAndReceive, CommClientException
+        from .comm import protocol, sendAndReceive, CommClientException
 
         try:
             frame = sendAndReceive(self._ip,self._port,protocol.frame(prc.PRC_CODE,(self._session_id,data)))
@@ -141,7 +145,7 @@ class PRCClient(object):
             Nothing
         """
         import sys
-        from comm import protocol, sendAndReceive, CommClientException
+        from .comm import protocol, sendAndReceive, CommClientException
 
         while True:
             if self._exit.is_set(): break

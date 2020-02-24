@@ -1,6 +1,8 @@
 ################################################################################
 ################################### Classes ####################################
 ################################################################################
+from future import standard_library
+standard_library.install_aliases()
 class ProtocolException(Exception): pass
 
 ################################################################################
@@ -46,9 +48,9 @@ def _encode(data):
         data        - Encoded data
     """
     import base64
-    import cPickle
+    import pickle
 
-    return base64.b64encode(cPickle.dumps(data))
+    return base64.b64encode(pickle.dumps(data))
 
 def _decode(data):
     """
@@ -61,6 +63,6 @@ def _decode(data):
         data        - Decoded data
     """
     import base64
-    import cPickle
+    import pickle
 
-    return cPickle.loads(base64.b64decode(data))
+    return pickle.loads(base64.b64decode(data))

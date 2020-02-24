@@ -2,7 +2,7 @@ from distutils.core import setup
 
 setup(
     name='PRC',
-    version='0.9.3',
+    version='1.0.0',
     author='Damian Nowok',
     author_email='damian.nowok@gmail.com',
     packages=['prc', 'prc.test', 'prc.comm'],
@@ -14,4 +14,7 @@ setup(
     classifiers=[
         "Programming Language :: Python :: 3"
     ],
+    install_requires=[
+          'future',
+      ],
 )
