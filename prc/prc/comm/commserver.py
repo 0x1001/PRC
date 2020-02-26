@@ -3,6 +3,7 @@ from future import standard_library
 standard_library.install_aliases()
 from builtins import str
 import socketserver
+import socket
 from . import comm
 
 ################################################################################
@@ -14,9 +15,12 @@ REQUEST_QUEUE_SIZE = 10
 ################################### Classes ####################################
 ################################################################################
 
-class CommServerException(comm.CommException): pass
 
-class CommServer(socketserver.BaseRequestHandler,comm.Comm):
+class CommServerException(comm.CommException): 
+    pass
+
+    
+class CommServer(socketserver.BaseRequestHandler, comm.Comm):
     """
         This class is responsible for Server communication
         A thread that servs client
@@ -53,11 +57,14 @@ class CommServer(socketserver.BaseRequestHandler,comm.Comm):
             Returns:
             Received data
         """
-        import socket
-
-        try: data = self.request.recv(buffer)
-        except socket.error as error: raise CommServerException(str(error))
-
+        try: 
+            data = self.request.recv(buffer)
+        except socket.error as error: 
+            raise CommServerException(str(error))
+        
+        if isinstance(data, bytes):
+            data = data.decode()
+        
         return data
 
     def _lowLevelSend(self,data):
@@ -70,8 +77,9 @@ class CommServer(socketserver.BaseRequestHandler,comm.Comm):
             Returns:
             Send data size
         """
-        import socket
-
+        if isinstance(data, str):
+            data = data.encode("ascii")
+        
         try: size = self.request.send(data)
         except socket.error as error: raise CommServerException(str(error))
 
@@ -106,10 +114,8 @@ def server_factory(ip,port,request_handler,socket_server=None):
         Returns:
         Server handle
     """
-    import socket
-    import socketserver
-
-    class Handler(CommServer): handle = request_handler
+    class Handler(CommServer): 
+        handle = request_handler
 
     socket_server = socket_server if socket_server else socketserver.ThreadingTCPServer
 

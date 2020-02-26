@@ -7,6 +7,10 @@ from builtins import object
 import code
 from . import prc
 import socketserver
+from .comm import server_factory
+from .comm import CommServerException
+import threading
+import queue
 ################################################################################
 ############################## Constants #######################################
 ################################################################################
@@ -14,8 +18,12 @@ import socketserver
 ################################################################################
 ############################## Classes #########################################
 ################################################################################
-class PRCServerException(prc.PRCException): pass
 
+
+class PRCServerException(prc.PRCException): 
+    pass
+
+    
 class PRCServer(object):
     """
         This is main PRCServer class
@@ -24,13 +32,11 @@ class PRCServer(object):
         _comm_server            - Socket server
         _comm_server_thread     - Communication Thread
     """
-    def __init__(self,ip="",port=prc.DEFAULT_PORT):
-        from .comm import server_factory
-        from .comm import CommServerException
-        import threading
-
-        try: self._comm_server = server_factory(ip,port,request_handler,PRCSocketServer)
-        except CommServerException as error: raise PRCServerException(error)
+    def __init__(self, ip="", port=prc.DEFAULT_PORT):
+        try: 
+            self._comm_server = server_factory(ip,port,request_handler,PRCSocketServer)
+        except CommServerException as error: 
+            raise PRCServerException(error)
 
         self._comm_server_thread = threading.Thread(target=self._comm_server.serve_forever)
         self._comm_server_thread.daemon = True
@@ -86,9 +92,6 @@ class PRCConsole(code.InteractiveConsole):
         _exit                   - Exit event
     """
     def __init__(self,locals={}):
-        import queue
-        import threading
-
         locals["__prcconsole__"] = self
         locals["__name__"] = "__prcconsole__"
         locals["__doc__"] = "Python Remote Console"
@@ -193,7 +196,8 @@ class PRCConsole(code.InteractiveConsole):
             Returns:
             Nothing
         """
-        try: return_value = code.InteractiveConsole.push(self,*args,**kargs)
+        try: 
+            return_value = code.InteractiveConsole.push(self,*args,**kargs)
         except SystemExit:
             self._exit.set()
             raise
@@ -223,8 +227,6 @@ class PRCSocketServer(socketserver.ThreadingTCPServer):
         _locals         - Custom locals for PRCConsole
     """
     def __init__(self,*args,**kargs):
-        import threading
-
         socketserver.ThreadingTCPServer.__init__(self,*args,**kargs)
         self._consoles = {}
         self._consoles_lock = threading.RLock()
@@ -338,7 +340,7 @@ def request_handler(request):
         raise PRCServerException("Not implemented! " + str(cmd))
 
     try:
-        request.send(send_frame)
+        request.send(str(send_frame))
     except CommException as error:
         print(error)
     finally:

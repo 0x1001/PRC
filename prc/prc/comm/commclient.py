@@ -1,7 +1,10 @@
 from __future__ import print_function
 from __future__ import absolute_import
 from builtins import str
+from builtins import bytes
 from . import comm
+import socket
+import time
 
 ######################################################################################
 ################################### Classes ##########################################
@@ -35,9 +38,6 @@ class CommClient(comm.Comm):
             Returns:
             Nothing
         """
-        import time
-        import socket
-
         try:
             self.socket_reference.connect((ip, port))
         except socket.error:
@@ -55,11 +55,14 @@ class CommClient(comm.Comm):
             Returns:
             Received data
         """
-        import socket
+        try: 
+            data = self.socket_reference.recv(buffer)
+        except socket.error as error: 
+            raise CommClientException(str(error))
 
-        try: data = self.socket_reference.recv(buffer)
-        except socket.error as error: raise CommClientException(str(error))
-
+        if isinstance(data, bytes):
+            data = data.decode()
+        
         return data
 
     def _lowLevelSend(self,data):
@@ -72,10 +75,13 @@ class CommClient(comm.Comm):
             Returns:
             Send data size
         """
-        import socket
-        
-        try: size = self.socket_reference.send(data)
-        except socket.error as error: raise CommClientException(str(error)) 
+        if isinstance(data, str):
+            data = data.encode("ascii")
+      
+        try: 
+            size = self.socket_reference.send(data)
+        except socket.error as error: 
+            raise CommClientException(str(error)) 
         
         return  size
 
@@ -101,14 +107,13 @@ class CommClient(comm.Comm):
             Returns:
             Nothing
         """
-        import socket
         self.socket_reference = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 ######################################################################################
 ################################### Functions ########################################
 ######################################################################################
 
-def sendAndReceive(ip,port,data_to_send,retry=3):
+def sendAndReceive(ip, port, data_to_send, retry=3):
     """
         This function sends and receives frames from server
 
@@ -119,15 +124,20 @@ def sendAndReceive(ip,port,data_to_send,retry=3):
         Received data
     """
     connection = CommClient()
+    
+    if isinstance(data_to_send, str):
+        data_to_send = data_to_send.encode('ascii')
+    
     try:
-        connection.connect(ip,port)
+        connection.connect(ip, port)
         connection.send(data_to_send)
         data_received = connection.receive()
         connection.close()
     except comm.CommException as error:
-        if retry == 0: raise CommClientException(error)
+        if retry == 0: 
+            raise CommClientException(error)
         print(str(error) + "  Retrying ... " + str(retry))
         retry -= 1
-        data_received = sendAndReceive(ip,port,data_to_send,retry)
+        data_received = sendAndReceive(ip, port, data_to_send, retry)
 
     return data_received

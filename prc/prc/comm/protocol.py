@@ -2,13 +2,20 @@
 ################################### Classes ####################################
 ################################################################################
 from future import standard_library
+import base64
+import pickle
+    
 standard_library.install_aliases()
-class ProtocolException(Exception): pass
 
+
+class ProtocolException(Exception): 
+    pass
+
+    
 ################################################################################
 ############### Functions Encode / Decode ######################################
 ################################################################################
-def frame(cmd,data=None):
+def frame(cmd, data=None):
     """
         This function creates protocol frame
 
@@ -19,7 +26,7 @@ def frame(cmd,data=None):
         Returns:
         protocol_data       - Protocol frame
     """
-    return _encode((cmd,data))
+    return _encode((cmd, data))
 
 def analyze(frame):
     """
@@ -47,9 +54,6 @@ def _encode(data):
         Returns:
         data        - Encoded data
     """
-    import base64
-    import pickle
-
     return base64.b64encode(pickle.dumps(data))
 
 def _decode(data):
@@ -62,7 +66,4 @@ def _decode(data):
         Returns:
         data        - Decoded data
     """
-    import base64
-    import pickle
-
     return pickle.loads(base64.b64decode(data))

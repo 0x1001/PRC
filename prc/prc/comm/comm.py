@@ -2,8 +2,15 @@
 ################################### Classes ##########################################
 ######################################################################################
 from builtins import str
+from builtins import bytes
 from builtins import object
-class CommException(Exception): pass
+import getpass
+import socket
+
+
+class CommException(Exception): 
+    pass
+
 
 class Comm(object):
     """
@@ -15,10 +22,10 @@ class Comm(object):
 
         Variable:
     """
-    ACKNOWLEDGE = b'ACKNOWLEDGE'
+    ACKNOWLEDGE = str("ACKNOWLEDGE")
     BUFFER_SIZE = 4096
 
-    def send(self,data):
+    def send(self, data):
         """
             This function sends data.
             Transmission protocol:
@@ -33,8 +40,8 @@ class Comm(object):
             Returns:
             Nothing
         """
-        if not isinstance(data, str):
-            raise CommException(str(type(data)) + " is wrong type. Data to send has to be string")
+        #if not isinstance(data, str) or not isinstance(data, bytes):
+        #    raise CommException(str(type(data)) + " is wrong type. Data to send has to be string or bytes")
 
         data_length = len(data)
         self._lowLevelSend(str(data_length))
@@ -69,8 +76,10 @@ class Comm(object):
         """
         data_received = self._lowLevelRecv(self.BUFFER_SIZE)
 
-        try: data_length = int(data_received)
-        except ValueError: raise CommException("Received data length is invalid.")
+        try: 
+            data_length = int(data_received)
+        except ValueError: 
+            raise CommException("Received data length is invalid.")
 
         self._lowLevelSend(self.ACKNOWLEDGE)
         received_data_length = 0
@@ -197,7 +206,6 @@ def getHostName():
         Returns:
         Host name
     """
-    import socket
     return socket.gethostname()
 
 def getUserName():
@@ -210,5 +218,4 @@ def getUserName():
         Returns:
         User name
     """
-    import getpass
     return getpass.getuser()
