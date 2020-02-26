@@ -99,12 +99,12 @@ class PRCClient(object):
             prompt
         """
         try:
-            frame = sendAndReceive(self._ip,self._port,protocol.frame(prc.PRC_PROMPT,self._session_id))
+            frame = sendAndReceive(self._ip, self._port, protocol.frame(prc.PRC_PROMPT, self._session_id))
         except CommClientException as error:
             self._exit.set()
             raise PRCClientException("Connection problem: " + str(error))
 
-        cmd,prompt = protocol.analyze(frame)
+        cmd, prompt = protocol.analyze(frame)
 
         self._synch.acquire()
 
@@ -130,7 +130,7 @@ class PRCClient(object):
 
         self._synch.acquire()
 
-        cmd,data = protocol.analyze(frame)
+        cmd, data = protocol.analyze(frame)
         
         if cmd == prc.PRC_EXIT: 
             raise SystemExit
@@ -149,12 +149,12 @@ class PRCClient(object):
             if self._exit.is_set(): break
 
             try:
-                frame = sendAndReceive(self._ip,self._port,protocol.frame(prc.PRC_OUTPUT,self._session_id))
+                frame = sendAndReceive(self._ip, self._port, protocol.frame(prc.PRC_OUTPUT, self._session_id))
             except CommClientException as error:
                 self._exit.set()
                 raise PRCClientException("Connection problem: " + str(error))
 
-            cmd,data = protocol.analyze(frame)
+            cmd, data = protocol.analyze(frame)
             if cmd == prc.PRC_OUTPUT:
                 sys.stdout.write(data)
             elif cmd == prc.PRC_CONFIRM:

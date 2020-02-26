@@ -96,7 +96,7 @@ class PRCConsole(code.InteractiveConsole):
         locals["__name__"] = "__prcconsole__"
         locals["__doc__"] = "Python Remote Console"
 
-        code.InteractiveConsole.__init__(self,locals,filename="<PRCConsole>")
+        code.InteractiveConsole.__init__(self, locals, filename="<PRCConsole>")
 
         self._input_queue = queue.Queue()
         self._output_queue = queue.Queue()
@@ -186,7 +186,7 @@ class PRCConsole(code.InteractiveConsole):
         self._code_executed.wait()
         self._code_executed.clear()
 
-    def push(self,*args,**kargs):
+    def push(self, *args, **kargs):
         """
             Adding synchronization elements
 
@@ -197,11 +197,12 @@ class PRCConsole(code.InteractiveConsole):
             Nothing
         """
         try: 
-            return_value = code.InteractiveConsole.push(self,*args,**kargs)
+            return_value = code.InteractiveConsole.push(self, *args, **kargs)
         except SystemExit:
             self._exit.set()
             raise
-        finally: self._code_executed.set()
+        finally: 
+            self._code_executed.set()
 
         return return_value
 
@@ -255,7 +256,8 @@ class PRCSocketServer(socketserver.ThreadingTCPServer):
             Returns:
             Nothing
         """
-        with self._consoles_lock: self._consoles[session_id] = PRCConsole(self._locals)
+        with self._consoles_lock: 
+            self._consoles[session_id] = PRCConsole(self._locals)
 
     def remove_console(self,session_id):
         """
@@ -267,7 +269,8 @@ class PRCSocketServer(socketserver.ThreadingTCPServer):
             Returns:
             Nothing
         """
-        with self._consoles_lock: self._consoles.pop(session_id)
+        with self._consoles_lock: 
+            self._consoles.pop(session_id)
 
     def get_console(self,session_id):
         """
@@ -279,7 +282,8 @@ class PRCSocketServer(socketserver.ThreadingTCPServer):
             Returns:
             Console
         """
-        with self._consoles_lock: return self._consoles[session_id]
+        with self._consoles_lock: 
+            return self._consoles[session_id]
 
 ################################################################################
 ############################## Functions #######################################
@@ -305,7 +309,7 @@ def request_handler(request):
         request.close()
         return
 
-    cmd,data = protocol.analyze(recv_frame)
+    cmd, data = protocol.analyze(recv_frame)
 
     if cmd == prc.PRC_NEW_SESSION:
         request.server.add_console(data)
@@ -314,10 +318,10 @@ def request_handler(request):
     elif cmd == prc.PRC_OUTPUT:
         output = request.server.get_console(data).get_output_queue().get()
 
-        if type(output) == str:
-            send_frame = protocol.frame(prc.PRC_OUTPUT,output)
-        elif type(output) == prc.PRCCmd:
+        if isinstance(output, prc.PRCCmd):
             send_frame = protocol.frame(output)
+        else:
+            send_frame = protocol.frame(prc.PRC_OUTPUT, output)
 
     elif cmd == prc.PRC_PROMPT:
         prompt = request.server.get_console(data).get_prompt()
@@ -339,8 +343,11 @@ def request_handler(request):
     else:
         raise PRCServerException("Not implemented! " + str(cmd))
 
+    if isinstance(send_frame, str):
+        send_frame = send_frame.encode('ascii')
+        
     try:
-        request.send(str(send_frame))
+        request.send(send_frame)
     except CommException as error:
         print(error)
     finally:
