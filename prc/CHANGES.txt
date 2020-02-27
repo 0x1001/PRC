@@ -30,3 +30,7 @@
 - Default IP address is set to 127.0.0.1 instead of localhost name
 
 - Session ID is generated with uuid instead of time.
+
+1.0.0 - 2020-02-27
+------------------
+- Ported to python 3.x
